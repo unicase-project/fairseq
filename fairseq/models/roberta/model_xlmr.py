@@ -9,7 +9,7 @@ Unsupervised Cross-lingual Representation Learning at Scale
 from fairseq.models import register_model, register_model_architecture
 
 from .hub_interface import RobertaHubInterface
-from .model import RobertaModel
+from .model import RobertaModel, base_architecture
 
 
 @register_model('xlmr')
