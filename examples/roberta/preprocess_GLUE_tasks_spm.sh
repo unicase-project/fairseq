@@ -176,6 +176,7 @@ do
       --destdir "$TASK_BIN/label" \
       --workers 60;
   else
+    mkdir -p "$TASK_BIN/label"
     # For STS-B output range is converted to be between: [0.0, 1.0]
     awk '{print $1 / 5.0 }' "$TASK_DATA_FOLDER/processed/train.label" > "$TASK_BIN/label/train.label"
     awk '{print $1 / 5.0 }' "$TASK_DATA_FOLDER/processed/dev.label" > "$TASK_BIN/label/valid.label"
