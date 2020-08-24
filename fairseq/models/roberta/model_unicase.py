@@ -10,9 +10,7 @@ from typing import Optional, Tuple
 from fairseq.models import register_model, register_model_architecture
 
 from .hub_interface import RobertaHubInterface
-from .model import RobertaModel, base_architecture
-
-
+from .model import RobertaModel, base_architecture, RobertaEncoder
 
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
@@ -44,7 +42,6 @@ from fairseq.modules.quant_noise import quant_noise as apply_quant_noise_
 
 from .hub_interface import RobertaHubInterface
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -54,52 +51,81 @@ class UnicaseSentenceEncoder(TransformerSentenceEncoder):
     """
 
     def __init__(
-        self,
-        padding_idx: int,
-        vocab_size: int,
-        num_encoder_layers: int = 6,
-        embedding_dim: int = 768,
-        ffn_embedding_dim: int = 3072,
-        num_attention_heads: int = 8,
-        dropout: float = 0.1,
-        attention_dropout: float = 0.1,
-        activation_dropout: float = 0.1,
-        layerdrop : float = 0.0,
-        max_seq_len: int = 256,
-        num_segments: int = 2,
-        use_position_embeddings: bool = True,
-        offset_positions_by_padding: bool = True,
-        encoder_normalize_before: bool = False,
-        apply_bert_init: bool = False,
-        activation_fn: str = "relu",
-        learned_pos_embedding: bool = True,
-        embed_scale: float = None,
-        freeze_embeddings: bool = False,
-        n_trans_layers_to_freeze: int = 0,
-        export: bool = False,
-        traceable: bool = False,
-        q_noise: float = 0.0,
-        qn_block_size: int = 8,
+            self,
+            padding_idx: int,
+            vocab_size: int,
+            num_encoder_layers: int = 6,
+            embedding_dim: int = 768,
+            ffn_embedding_dim: int = 3072,
+            num_attention_heads: int = 8,
+            dropout: float = 0.1,
+            attention_dropout: float = 0.1,
+            activation_dropout: float = 0.1,
+            layerdrop: float = 0.0,
+            max_seq_len: int = 256,
+            num_segments: int = 2,
+            use_position_embeddings: bool = True,
+            offset_positions_by_padding: bool = True,
+            encoder_normalize_before: bool = False,
+            apply_bert_init: bool = False,
+            activation_fn: str = "relu",
+            learned_pos_embedding: bool = True,
+            embed_scale: float = None,
+            freeze_embeddings: bool = False,
+            n_trans_layers_to_freeze: int = 0,
+            export: bool = False,
+            traceable: bool = False,
+            q_noise: float = 0.0,
+            qn_block_size: int = 8,
+            dict_cased_words: int = 0,
+            dict_non_cased_words: int = 0,
+            dict_nspecial: int = 0,
     ) -> None:
 
         super().__init__(padding_idx, vocab_size, num_encoder_layers, embedding_dim,
                          ffn_embedding_dim, num_attention_heads, dropout, attention_dropout,
-                         activation_dropout, layerdrop , max_seq_len, num_segments,
+                         activation_dropout, layerdrop, max_seq_len, num_segments,
                          use_position_embeddings, offset_positions_by_padding,
                          encoder_normalize_before, apply_bert_init, activation_fn,
                          learned_pos_embedding, embed_scale, freeze_embeddings,
                          n_trans_layers_to_freeze, export, traceable, q_noise, qn_block_size)
 
+        assert dict_nspecial != 0 and dict_non_cased_words != 0 and dict_cased_words != 0, \
+            "All dictionary options need to be passed"
+
+        self.dict_non_cased_words = dict_non_cased_words
+        self.dict_cased_words = dict_cased_words
+        self.dict_nspecial = dict_nspecial
+        self.base_token_size = self.vocab_size - 2 * (self.dict_cased_words // 3)
+        self.embed_tokens = self.build_embedding(
+            self.base_token_size, self.embedding_dim, self.padding_idx
+        )
+
+        self.embed_case = self.build_embedding(
+            4, self.embedding_dim, None
+        )
+
         # Apply initialization of model params after building the model
         if self.apply_bert_init:
             self.apply(init_bert_params)
 
+    def get_unicase_ids(self, token_ids):
+        all_non_cased = self.dict_nspecial + self.dict_non_cased_words
+        word_offset = (token_ids - all_non_cased).clamp(0)
+        reminder = word_offset.remainder(3)
+        floor_div = word_offset.floor_divide(3)
+        token_base_ids = token_ids - reminder - 2 * floor_div
+        case_ids = (reminder + 1) * (token_ids.ge(all_non_cased) *
+                                    token_ids.lt(all_non_cased + self.dict_cased_words))
+
+        return token_base_ids, case_ids
+
     def forward(
-        self,
-        tokens: torch.Tensor,
-        segment_labels: torch.Tensor = None,
-        last_state_only: bool = False,
-        positions: Optional[torch.Tensor] = None,
+            self,
+            tokens: torch.Tensor,
+            segment_labels: torch.Tensor = None,
+            last_state_only: bool = False,
+            positions: Optional[torch.Tensor] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
 
         # compute padding mask. This is needed for multi-head attention
@@ -107,7 +133,10 @@ class UnicaseSentenceEncoder(TransformerSentenceEncoder):
         if not self.traceable and not self.tpu and not padding_mask.any():
             padding_mask = None
 
-        x = self.embed_tokens(tokens)
+        token_base_ids, case_ids = self.get_unicase_ids(tokens)
+
+        x = self.embed_tokens(token_base_ids)
+        x += self.embed_case(case_ids)
 
         if self.embed_scale is not None:
             x *= self.embed_scale
@@ -124,7 +153,7 @@ class UnicaseSentenceEncoder(TransformerSentenceEncoder):
         if self.emb_layer_norm is not None:
             x = self.emb_layer_norm(x)
 
-        x = F.dropout(x, p=self.dropout, training=self.training)
+        x = self.dropout_module(x)
 
         # account for padding while computing the representation
         if padding_mask is not None:
@@ -156,19 +185,16 @@ class UnicaseSentenceEncoder(TransformerSentenceEncoder):
 @register_model('unicase')
 class UnicaseModel(RobertaModel):
     def __init__(self, args, encoder):
-        super().__init__(encoder)
-        self.args = args
-
-        # We follow BERT's random weight initialization
-        self.apply(init_bert_params)
-
-        self.classification_heads = nn.ModuleDict()
+        super().__init__(args, encoder)
 
     @staticmethod
     def add_args(parser):
-        super().add_args(parser)
+        RobertaModel.add_args(parser)
         """Add model-specific arguments to the parser."""
-        parser.add_argument('--dict-non-words', type=int, help='num encoder layers')
+        parser.add_argument('--dict_non_cased_words', type=int, help='number of non-cased words'
+                                                                     'at the begining of dict')
+        parser.add_argument('--dict_cased_words', type=int, help='number of cased words which'
+                                                                 'occur in triplets in dict')
 
     @classmethod
     def build_model(cls, args, task):
@@ -193,7 +219,8 @@ class UnicaseModel(RobertaModel):
             return F.softmax(logits, dim=-1)
 
     @classmethod
-    def from_pretrained(cls, model_name_or_path, checkpoint_file='model.pt', data_name_or_path='.', bpe='sentencepiece', **kwargs):
+    def from_pretrained(cls, model_name_or_path, checkpoint_file='model.pt', data_name_or_path='.',
+                        bpe='sentencepiece', **kwargs):
         from fairseq import hub_utils
         x = hub_utils.from_pretrained(
             model_name_or_path,
@@ -245,6 +272,14 @@ class UnicaseEncoder(FairseqEncoder):
         if args.encoder_layers_to_keep:
             args.encoder_layers = len(args.encoder_layers_to_keep.split(","))
 
+        assert args.dict_cased_words % 3 == 0, "Cased words need to occur in triplets in dictionary"
+        if dictionary[-1] == '<mask>':
+            assert (args.dict_cased_words + args.dict_non_cased_words +
+                    dictionary.nspecial) + 1 == len(dictionary)
+        else:
+            assert (args.dict_cased_words + args.dict_non_cased_words +
+                    dictionary.nspecial) == len(dictionary)
+
         self.sentence_encoder = UnicaseSentenceEncoder(
             padding_idx=dictionary.pad(),
             vocab_size=len(dictionary),
@@ -263,12 +298,15 @@ class UnicaseEncoder(FairseqEncoder):
             activation_fn=args.activation_fn,
             q_noise=args.quant_noise_pq,
             qn_block_size=args.quant_noise_pq_block_size,
+            dict_cased_words=args.dict_cased_words,
+            dict_non_cased_words=args.dict_non_cased_words,
+            dict_nspecial=dictionary.nspecial,
         )
         args.untie_weights_roberta = getattr(args, 'untie_weights_roberta', False)
 
         self.lm_head = RobertaLMHead(
             embed_dim=args.encoder_embed_dim,
-            output_dim=len(dictionary),
+            output_dim=len(dictionary) - 2 * (args.dict_cased_words // 3),
             activation_fn=args.activation_fn,
             weight=self.sentence_encoder.embed_tokens.weight if not args.untie_weights_roberta else None,
         )
@@ -280,15 +318,8 @@ class UnicaseEncoder(FairseqEncoder):
             weight=self.sentence_encoder.embed_case.weight if not args.untie_weights_roberta else None,
         )
 
-    def get_dictionary_mappings(self, dictionary):
-        token_map = {}
-        case_map = {}
-
-        return token_map, case_map
-
-
-
-    def forward(self, src_tokens, features_only=False, return_all_hiddens=False, masked_tokens=None, **unused):
+    def forward(self, src_tokens, features_only=False, return_all_hiddens=False, masked_tokens=None,
+                **unused):
         """
         Args:
             src_tokens (LongTensor): input tokens of shape `(batch, src_len)`
@@ -307,6 +338,7 @@ class UnicaseEncoder(FairseqEncoder):
         """
         x, extra = self.extract_features(src_tokens, return_all_hiddens=return_all_hiddens)
         if not features_only:
+            extra["case_output"] = self.case_layer(x, masked_tokens=masked_tokens)
             x = self.output_layer(x, masked_tokens=masked_tokens)
         return x, extra
 
@@ -329,81 +361,6 @@ class UnicaseEncoder(FairseqEncoder):
         return self.args.max_positions
 
 
-@register_model_architecture('roberta', 'roberta')
-def base_architecture(args):
-    args.encoder_layers = getattr(args, 'encoder_layers', 12)
-    args.encoder_embed_dim = getattr(args, 'encoder_embed_dim', 768)
-    args.encoder_ffn_embed_dim = getattr(args, 'encoder_ffn_embed_dim', 3072)
-    args.encoder_attention_heads = getattr(args, 'encoder_attention_heads', 12)
-
-    args.activation_fn = getattr(args, 'activation_fn', 'gelu')
-    args.pooler_activation_fn = getattr(args, 'pooler_activation_fn', 'tanh')
-
-    args.dropout = getattr(args, 'dropout', 0.1)
-    args.attention_dropout = getattr(args, 'attention_dropout', 0.1)
-    args.activation_dropout = getattr(args, 'activation_dropout', 0.0)
-    args.pooler_dropout = getattr(args, 'pooler_dropout', 0.0)
-    args.encoder_layers_to_keep = getattr(args, 'encoder_layers_to_keep', None)
-    args.encoder_layerdrop = getattr(args, 'encoder_layerdrop', 0.0)
-
-
-@register_model_architecture('roberta', 'roberta_base')
-def roberta_base_architecture(args):
-    base_architecture(args)
-
-
-@register_model_architecture('roberta', 'roberta_large')
-def roberta_large_architecture(args):
-    args.encoder_layers = getattr(args, 'encoder_layers', 24)
-    args.encoder_embed_dim = getattr(args, 'encoder_embed_dim', 1024)
-    args.encoder_ffn_embed_dim = getattr(args, 'encoder_ffn_embed_dim', 4096)
-    args.encoder_attention_heads = getattr(args, 'encoder_attention_heads', 16)
-    base_architecture(args)
-
-
-@register_model_architecture('roberta', 'xlm')
-def xlm_architecture(args):
-    args.encoder_layers = getattr(args, 'encoder_layers', 16)
-    args.encoder_embed_dim = getattr(args, 'encoder_embed_dim', 1280)
-    args.encoder_ffn_embed_dim = getattr(args, 'encoder_ffn_embed_dim', 1280*4)
-    args.encoder_attention_heads = getattr(args, 'encoder_attention_heads', 16)
-    base_architecture(args)
-
-
-@register_model('unicase')
-class UnicaseModel(RobertaModel):
-
-    @classmethod
-    def hub_models(cls):
-        return {
-            'xlmr.base': 'http://dl.fbaipublicfiles.com/fairseq/models/xlmr.base.tar.gz',
-            'xlmr.large': 'http://dl.fbaipublicfiles.com/fairseq/models/xlmr.large.tar.gz',
-        }
-
-    @classmethod
-    def from_pretrained(cls, model_name_or_path, checkpoint_file='model.pt', data_name_or_path='.', bpe='sentencepiece', **kwargs):
-        from fairseq import hub_utils
-        x = hub_utils.from_pretrained(
-            model_name_or_path,
-            checkpoint_file,
-            data_name_or_path,
-            archive_map=cls.hub_models(),
-            bpe=bpe,
-            load_checkpoint_heads=True,
-            **kwargs,
-        )
-        return RobertaHubInterface(x['args'], x['task'], x['models'][0])
-
-
-@register_model_architecture('xlmr', 'xlmr_base')
-def xlm_architecture(args):
-    base_architecture(args)
-
-
-@register_model_architecture('xlmr', 'xlmr_large')
-def xlm_architecture(args):
-    args.encoder_layers = getattr(args, 'encoder_layers', 24)
-    args.encoder_embed_dim = getattr(args, 'encoder_embed_dim', 1024)
-    args.encoder_ffn_embed_dim = getattr(args, 'encoder_ffn_embed_dim', 4096)
-    args.encoder_attention_heads = getattr(args, 'encoder_attention_heads', 16)
+@register_model_architecture('unicase', 'unicase_base')
+def unicase_base_architecture(args):
     base_architecture(args)
