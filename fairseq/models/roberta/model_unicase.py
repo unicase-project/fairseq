@@ -109,7 +109,7 @@ class UnicaseSentenceEncoder(TransformerSentenceEncoder):
         if self.apply_bert_init:
             self.apply(init_bert_params)
 
-    @torch.no_grad
+    @torch.no_grad()
     def get_unicase_ids(self, token_ids):
         all_non_cased = self.dict_nspecial + self.dict_non_cased_words
         word_offset = (token_ids - all_non_cased).clamp(0)
