@@ -130,7 +130,8 @@ class UnicaseMaskedLmLoss(FairseqCriterion):
         if masked_tokens is not None:
             targets = targets[masked_tokens]
 
-        target_base_tokens, target_cases = model.encoder.sentence_encoder.get_unicase_ids(targets)
+        with torch.no_grad():
+            target_base_tokens, target_cases = model.encoder.sentence_encoder.get_unicase_ids(targets)
 
         base_token_loss = modules.cross_entropy(
             logits.view(-1, logits.size(-1)),
@@ -139,19 +140,19 @@ class UnicaseMaskedLmLoss(FairseqCriterion):
             ignore_index=self.padding_idx,
         )
 
-        case_loss = modules.cross_entropy(
-            extra["case_output"].view(-1, extra["case_output"].size(-1)),
-            target_cases.view(-1),
-            reduction='sum',
-            ignore_index=0,
-        )
+        # case_loss = modules.cross_entropy(
+        #     extra["case_output"].view(-1, extra["case_output"].size(-1)),
+        #     target_cases.view(-1),
+        #     reduction='sum',
+        #     ignore_index=0,
+        # )
 
-        loss = base_token_loss + 0.2 * case_loss
+        loss = base_token_loss  # + 0.2 * case_loss
 
         logging_output = {
             'loss': loss if self.tpu else loss.data,
             'loss_base': base_token_loss if self.tpu else base_token_loss.data,
-            'loss_case': case_loss if self.tpu else case_loss.data,
+            # 'loss_case': case_loss if self.tpu else case_loss.data,
             'ntokens': sample['ntokens'],
             'nsentences': sample['nsentences'],
             'sample_size': sample_size,
