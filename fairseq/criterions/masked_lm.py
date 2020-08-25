@@ -147,12 +147,12 @@ class UnicaseMaskedLmLoss(FairseqCriterion):
             ignore_index=0,
         )
 
-        loss = base_token_loss + 0.2 * case_loss
+        loss = base_token_loss + 0.5 * case_loss
 
         logging_output = {
             'loss': loss if self.tpu else loss.data,
             'loss_base': base_token_loss if self.tpu else base_token_loss.data,
-            # 'loss_case': case_loss if self.tpu else case_loss.data,
+            'loss_case': case_loss if self.tpu else case_loss.data,
             'ntokens': sample['ntokens'],
             'nsentences': sample['nsentences'],
             'sample_size': sample_size,
