@@ -102,7 +102,7 @@ class UnicaseSentenceEncoder(TransformerSentenceEncoder):
         )
 
         self.embed_case = self.build_embedding(
-            4, self.embedding_dim, None
+            4, self.embedding_dim, 0
         )
 
         # Apply initialization of model params after building the model
@@ -113,13 +113,13 @@ class UnicaseSentenceEncoder(TransformerSentenceEncoder):
     def get_unicase_ids(self, token_ids):
         all_non_cased = self.dict_nspecial + self.dict_non_cased_words
         word_offset = (token_ids - all_non_cased).clamp(0)
-        reminder = word_offset.remainder(3)
+        reminder = word_offset.fmod(3)
         floor_div = word_offset.floor_divide(3)
         token_base_ids = token_ids - reminder - 2 * floor_div
         case_ids = (reminder + 1) * (token_ids.ge(all_non_cased) *
                                     token_ids.lt(all_non_cased + self.dict_cased_words))
 
-        return token_base_ids, case_ids
+        return token_base_ids.contiguous(), case_ids.contiguous()
 
     def forward(
             self,
