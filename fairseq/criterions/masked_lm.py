@@ -140,14 +140,14 @@ class UnicaseMaskedLmLoss(FairseqCriterion):
             ignore_index=self.padding_idx,
         )
 
-        # case_loss = modules.cross_entropy(
-        #     extra["case_output"].view(-1, extra["case_output"].size(-1)),
-        #     target_cases.view(-1),
-        #     reduction='sum',
-        #     ignore_index=0,
-        # )
+        case_loss = modules.cross_entropy(
+            extra["case_output"].view(-1, extra["case_output"].size(-1)),
+            target_cases.view(-1),
+            reduction='sum',
+            ignore_index=0,
+        )
 
-        loss = base_token_loss  # + 0.2 * case_loss
+        loss = base_token_loss + 0.2 * case_loss
 
         logging_output = {
             'loss': loss if self.tpu else loss.data,
