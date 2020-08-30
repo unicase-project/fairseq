@@ -5,12 +5,10 @@
 """
 Unicase Model
 """
+import json
+from pathlib import Path
 from typing import Optional, Tuple
-
-from fairseq.models import register_model, register_model_architecture
-
-from .hub_interface import RobertaHubInterface
-from .model import RobertaModel, base_architecture, RobertaEncoder
+from .model import RobertaModel, base_architecture
 
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
@@ -29,16 +27,14 @@ import torch.nn.functional as F
 from fairseq import utils
 from fairseq.models import (
     FairseqEncoder,
-    FairseqEncoderModel,
     register_model,
     register_model_architecture,
 )
 from fairseq.modules import (
     LayerNorm,
-    TransformerSentenceEncoder, TransformerSentenceEncoderLayer,
+    TransformerSentenceEncoder
 )
 from fairseq.modules.transformer_sentence_encoder import init_bert_params
-from fairseq.modules.quant_noise import quant_noise as apply_quant_noise_
 
 from .hub_interface import RobertaHubInterface
 
@@ -192,10 +188,7 @@ class UnicaseModel(RobertaModel):
     def add_args(parser):
         RobertaModel.add_args(parser)
         """Add model-specific arguments to the parser."""
-        parser.add_argument('--dict_non_cased_words', type=int, help='number of non-cased words'
-                                                                     'at the begining of dict')
-        parser.add_argument('--dict_cased_words', type=int, help='number of cased words which'
-                                                                 'occur in triplets in dict')
+        parser.add_argument('--unicase_dict_config', type=str, help='config of unicase dictionary')
 
     @classmethod
     def build_model(cls, args, task):
@@ -270,15 +263,17 @@ class UnicaseEncoder(FairseqEncoder):
         super().__init__(dictionary)
         self.args = args
 
+        dict_non_cased_words, dict_cased_words = self.read_dict_config(args.unicase_dict_config)
+
         if args.encoder_layers_to_keep:
             args.encoder_layers = len(args.encoder_layers_to_keep.split(","))
 
-        assert args.dict_cased_words % 3 == 0, "Cased words need to occur in triplets in dictionary"
+        assert dict_cased_words % 3 == 0, "Cased words need to occur in triplets in dictionary"
         if dictionary[-1] == '<mask>':
-            assert (args.dict_cased_words + args.dict_non_cased_words +
+            assert (dict_cased_words + dict_non_cased_words +
                     dictionary.nspecial) + 1 == len(dictionary)
         else:
-            assert (args.dict_cased_words + args.dict_non_cased_words +
+            assert (dict_cased_words + dict_non_cased_words +
                     dictionary.nspecial) == len(dictionary)
 
         self.sentence_encoder = UnicaseSentenceEncoder(
@@ -299,15 +294,15 @@ class UnicaseEncoder(FairseqEncoder):
             activation_fn=args.activation_fn,
             q_noise=args.quant_noise_pq,
             qn_block_size=args.quant_noise_pq_block_size,
-            dict_cased_words=args.dict_cased_words,
-            dict_non_cased_words=args.dict_non_cased_words,
+            dict_cased_words=dict_cased_words,
+            dict_non_cased_words=dict_non_cased_words,
             dict_nspecial=dictionary.nspecial,
         )
         args.untie_weights_roberta = getattr(args, 'untie_weights_roberta', False)
 
         self.lm_head = RobertaLMHead(
             embed_dim=args.encoder_embed_dim,
-            output_dim=len(dictionary) - 2 * (args.dict_cased_words // 3),
+            output_dim=len(dictionary) - 2 * (dict_cased_words // 3),
             activation_fn=args.activation_fn,
             weight=self.sentence_encoder.embed_tokens.weight if not args.untie_weights_roberta else None,
         )
@@ -318,6 +313,12 @@ class UnicaseEncoder(FairseqEncoder):
             activation_fn=args.activation_fn,
             weight=self.sentence_encoder.embed_case.weight if not args.untie_weights_roberta else None,
         )
+
+    @staticmethod
+    def read_dict_config(config_path):
+        with open(config_path, "r") as inp:
+            config = json.load(inp)
+        return config['non_word_tokens'], config['word_tokens']
 
     def forward(self, src_tokens, features_only=False, return_all_hiddens=False, masked_tokens=None,
                 **unused):
