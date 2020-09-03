@@ -6,7 +6,7 @@
 Unicase Model
 """
 from typing import Optional, Tuple
-from .model import RobertaModel, base_architecture
+from fairseq.models.roberta.model import RobertaModel, base_architecture
 
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
@@ -34,7 +34,7 @@ from fairseq.modules import (
 )
 from fairseq.modules.transformer_sentence_encoder import init_bert_params
 
-from .hub_interface import RobertaHubInterface
+from fairseq.models.roberta.hub_interface import RobertaHubInterface
 
 logger = logging.getLogger(__name__)
 
