@@ -93,16 +93,16 @@ wait
 rm en_head_*
 echo "Completed creation of training shards"
 
-fairseq-preprocess --only-source --srcdict dict.txt --trainpref en_train0.txt --validpref en_valid.txt --testpref en_test.txt --destdir data-bin0/ --workers 8 &
-fairseq-preprocess --only-source --srcdict dict.txt --trainpref en_train1.txt --validpref en_valid.txt --testpref en_test.txt --destdir data-bin1/ --workers 8 &
-fairseq-preprocess --only-source --srcdict dict.txt --trainpref en_train2.txt --validpref en_valid.txt --testpref en_test.txt --destdir data-bin2/ --workers 8 &
-fairseq-preprocess --only-source --srcdict dict.txt --trainpref en_train3.txt --validpref en_valid.txt --testpref en_test.txt --destdir data-bin3/ --workers 8 &
-fairseq-preprocess --only-source --srcdict dict.txt --trainpref en_train4.txt --validpref en_valid.txt --testpref en_test.txt --destdir data-bin4/ --workers 8 &
-fairseq-preprocess --only-source --srcdict dict.txt --trainpref en_train5.txt --validpref en_valid.txt --testpref en_test.txt --destdir data-bin5/ --workers 8 &
-fairseq-preprocess --only-source --srcdict dict.txt --trainpref en_train6.txt --validpref en_valid.txt --testpref en_test.txt --destdir data-bin6/ --workers 8 &
-fairseq-preprocess --only-source --srcdict dict.txt --trainpref en_train7.txt --validpref en_valid.txt --testpref en_test.txt --destdir data-bin7/ --workers 8 &
-fairseq-preprocess --only-source --srcdict dict.txt --trainpref en_train8.txt --validpref en_valid.txt --testpref en_test.txt --destdir data-bin8/ --workers 8 &
-fairseq-preprocess --only-source --srcdict dict.txt --trainpref en_train9.txt --validpref en_valid.txt --testpref en_test.txt --destdir data-bin9/ --workers 8 &
+fairseq-preprocess --only-source --srcdict dict.txt --trainpref en_train0.txt --validpref en_valid.txt --testpref en_test.txt --destdir data-bin0/ --workers 16 &
+fairseq-preprocess --only-source --srcdict dict.txt --trainpref en_train1.txt --validpref en_valid.txt --testpref en_test.txt --destdir data-bin1/ --workers 16 &
+fairseq-preprocess --only-source --srcdict dict.txt --trainpref en_train2.txt --validpref en_valid.txt --testpref en_test.txt --destdir data-bin2/ --workers 16 &
+fairseq-preprocess --only-source --srcdict dict.txt --trainpref en_train3.txt --validpref en_valid.txt --testpref en_test.txt --destdir data-bin3/ --workers 16 &
+fairseq-preprocess --only-source --srcdict dict.txt --trainpref en_train4.txt --validpref en_valid.txt --testpref en_test.txt --destdir data-bin4/ --workers 16 &
+fairseq-preprocess --only-source --srcdict dict.txt --trainpref en_train5.txt --validpref en_valid.txt --testpref en_test.txt --destdir data-bin5/ --workers 16 &
+fairseq-preprocess --only-source --srcdict dict.txt --trainpref en_train6.txt --validpref en_valid.txt --testpref en_test.txt --destdir data-bin6/ --workers 16 &
+fairseq-preprocess --only-source --srcdict dict.txt --trainpref en_train7.txt --validpref en_valid.txt --testpref en_test.txt --destdir data-bin7/ --workers 16 &
+fairseq-preprocess --only-source --srcdict dict.txt --trainpref en_train8.txt --validpref en_valid.txt --testpref en_test.txt --destdir data-bin8/ --workers 16 &
+fairseq-preprocess --only-source --srcdict dict.txt --trainpref en_train9.txt --validpref en_valid.txt --testpref en_test.txt --destdir data-bin9/ --workers 16 &
 
 wait
 echo "Completed fairseq-preprocess"

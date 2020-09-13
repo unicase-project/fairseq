@@ -29,6 +29,8 @@ And convert it to unicase-style SPM tokenizer
 python <unicase_utils_path>/convert_to_unicase_spm.py --spm_lower_model lower.model --out_prefix unicase
 ```
 
+Note: you need to install sentencepiece==0.1.86
+
 
 #### Create binarized data using spm and fairseq
 ```shell script
