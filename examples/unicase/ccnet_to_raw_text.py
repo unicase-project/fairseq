@@ -23,6 +23,15 @@ def process_file(filename, out_folder, do_lower_case):
 
 
 def main(inp_dir, out_dir, do_lower_case=False, num_workers=1):
+    """
+    Function extract files in cc net format to raw text which is aligned to language modelling
+    format consumed by fairseq (e.g. documents are separated by blank line)
+    Args:
+        inp_dir: input directory with `json.gz` files
+        out_dir: output directory where flat text file will be stored
+        do_lower_case: whether to lower-case output files
+        num_workers: number of workers
+    """
     file_paths = list(Path(inp_dir).glob("*json.gz"))
     writer_workers = Pool(min(num_workers, len(file_paths)))
     arguments = [(fl, out_dir, do_lower_case) for fl in file_paths]
