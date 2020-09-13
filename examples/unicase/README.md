@@ -5,53 +5,34 @@
 Data is created based on cc-net english dataset. Data should be extracted from `gzip` files 
 to `txt` files so it can be easilyprocessed by fairseq binarizer.
 
-#### Data extraction
+#### Data source
 ```
 python ccnet_to_raw_text.py --inp_dir /data-c/shared/corpora/ccnet/en --out_dir /data-c/shared/ar/unicase/data/raw_data --num_work 8
 ```
-
 We should create set for test and validation.
-
 ```shell script
 head -50000 en_head_0053.txt > en_test.txt
 tail -50000 en_head_0053.txt > en_valid.txt
 ```
 
+#### Tokenizer
 
-# create lowercased tokenizer
-
+Create lowercased tokenizer
+```shell script
 spm_train --input=../data/lowercased/en_head_0004.txt  --unk_id=0 --bos_id=-1 --eos_id=-1 \
 --pad_id=-1 --vocab_size=25000 --model_prefix=lower --character_coverage 0.9999 \
 --num_sub_iterations 2 --num_threads 32 --input_sentence_size 8000000 --shuffle_input_sentence=true
-
-
-
-
-Then use fairseq and SPM to prepare binarized data
-```shell script
-spm_encode --model=unigram32.model --output_format=piece < ../data/raw_data/en_test.txt > en_test.txt &
-spm_encode --model=unigram32.model --output_format=piece < ../data/raw_data/en_valid.txt > en_valid.txt &
-
-# for each file
-spm_encode --model=unigram32.model --output_format=piece < ../data/raw_data/en_head_0000.txt > en_head_0000.txt &
 ```
 
-Then join data to one file:
+And convert it to unicase-style SPM tokenizer
 ```shell script
-cat en_head_0000.txt en_head_0001.txt ... > en_train.txt
+python <unicase_utils_path>/convert_to_unicase_spm.py --spm_lower_model lower.model --out_prefix unicase
 ```
 
-And run processing by fairseq
 
+#### Create binarized data using spm and fairseq
 ```shell script
-fairseq-preprocess \
-    --only-source \
-    --srcdict dict.txt \
-    --trainpref en_train.txt \
-    --validpref en_valid.txt \
-    --testpref en_test.txt \
-    --destdir data-bin/ \
-    --workers 60
+<unicase_utils_path>/preprocess_data.sh unicase.model
 ```
 
 
