@@ -8,14 +8,14 @@
 # raw glue data as downloaded by glue download script (https://gist.github.com/W4ngatang/60c2bdb54d156a41194446737ce03e2e)
 if [[ $# -ne 5 ]]; then
   echo "Run as following:"
-  echo "./examples/roberta/preprocess_GLUE_tasks_spm.sh <glud_data_folder> <task_name> <spm_model_path> <spm_vocab_path> <out_folder>"
+  echo "./examples/roberta/preprocess_GLUE_tasks_spm.sh <glud_data_folder> <task_name> <spm_model_path> <dict_path> <out_folder>"
   exit 1
 fi
 
 GLUE_DATA_FOLDER=$1
 TASKS=$2 # QQP
 SPM_MODEL=$3
-SPM_VOCAB=$4
+DICT=$4
 OUT_FOLDER=$5
 
 
@@ -152,7 +152,7 @@ do
   fi
 
   #Generate dict
-  awk '{print $1 " 1" }' "$SPM_VOCAB" > "$OUT_FOLDER/dict.txt"
+  cp "$DICT" "$OUT_FOLDER/dict.txt"
 
   # Run fairseq preprocessing:
   for INPUT_TYPE in $(seq 0 $((INPUT_COUNT-1)))
