@@ -1,14 +1,18 @@
 #!/bin/bash
 
+# exit when any command fails
+set -e
 
 # below script assume that you have at least 80 threads for processing
 
-SPM_MODEL=$1
+MODEL_SPM=$1
 
 # create dict.txt
 spm_export_vocab --model="$MODEL_SPM" --output="$MODEL_SPM".vocab
 awk '{print $1 " 1" }' "$MODEL_SPM".vocab > dict.txt
 sed -i "1s/.*/<extra_id1> 1/" dict.txt
+
+exit 0
 
 echo "Completed creation of dict.txt"
 
