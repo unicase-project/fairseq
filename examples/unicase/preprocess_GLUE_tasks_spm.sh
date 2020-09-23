@@ -6,9 +6,9 @@
 
 
 # raw glue data as downloaded by glue download script (https://gist.github.com/W4ngatang/60c2bdb54d156a41194446737ce03e2e)
-if [[ $# -ne 5 ]]; then
+if [[ $# -ne 6 ]]; then
   echo "Run as following:"
-  echo "./examples/roberta/preprocess_GLUE_tasks_spm.sh <glud_data_folder> <task_name> <spm_model_path> <dict_path> <out_folder>"
+  echo "./examples/roberta/preprocess_GLUE_tasks_spm.sh <glud_data_folder> <task_name> <spm_model_path> <dict_path> <out_folder> <casing>"
   exit 1
 fi
 
@@ -17,6 +17,7 @@ TASKS=$2 # QQP
 SPM_MODEL=$3
 DICT=$4
 OUT_FOLDER=$5
+CASING=$6
 
 
 if [ "$TASKS" = "ALL" ]
@@ -129,6 +130,12 @@ do
     # BPE encode.
     for INPUT_TYPE in $(seq 0 $((INPUT_COUNT-1)))
     do
+      # optionally upppercase all input
+      if [ "$CASING" = "U" ]
+      then
+        echo "Converting to uppercase"
+        tr '[:lower:]' '[:upper:]' < "$TASK_DATA_FOLDER/processed/$SPLIT.raw.$LANG" > "$TASK_DATA_FOLDER/processed/$SPLIT.raw.$LANG"
+      fi
       LANG="input$INPUT_TYPE"
       echo "BPE encoding $SPLIT/$LANG"
       python -m scripts.spm_encode \
@@ -164,7 +171,7 @@ do
       --validpref "${DEVPREF//LANG/$LANG}" \
       --testpref "${TESTPREF//LANG/$LANG}" \
       --destdir "$TASK_BIN/$LANG" \
-      --workers 60 \
+      --workers 16 \
       --srcdict "$OUT_FOLDER/dict.txt";
   done
   if [[ "$TASK" !=  "STS-B" ]]
@@ -174,7 +181,7 @@ do
       --trainpref "$TASK_DATA_FOLDER/processed/train.label" \
       --validpref "${DEVPREF//LANG/label}" \
       --destdir "$TASK_BIN/label" \
-      --workers 60;
+      --workers 16;
   else
     mkdir -p "$TASK_BIN/label"
     # For STS-B output range is converted to be between: [0.0, 1.0]
