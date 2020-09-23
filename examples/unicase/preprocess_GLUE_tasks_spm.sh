@@ -134,6 +134,7 @@ do
       if [ "$CASING" = "U" ]
       then
         echo "Converting to uppercase"
+        echo "Copy $TASK_DATA_FOLDER/processed/$SPLIT.raw.$LANG $TASK_DATA_FOLDER/processed/$SPLIT.raworg.$LANG"
         cp "$TASK_DATA_FOLDER/processed/$SPLIT.raw.$LANG" "$TASK_DATA_FOLDER/processed/$SPLIT.raworg.$LANG";
         tr '[:lower:]' '[:upper:]' < "$TASK_DATA_FOLDER/processed/$SPLIT.raworg.$LANG" > "$TASK_DATA_FOLDER/processed/$SPLIT.raw.$LANG";
       fi
