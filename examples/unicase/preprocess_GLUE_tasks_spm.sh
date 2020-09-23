@@ -134,7 +134,8 @@ do
       if [ "$CASING" = "U" ]
       then
         echo "Converting to uppercase"
-        tr '[:lower:]' '[:upper:]' < "$TASK_DATA_FOLDER/processed/$SPLIT.raw.$LANG" > "$TASK_DATA_FOLDER/processed/$SPLIT.raw.$LANG"
+        cp "$TASK_DATA_FOLDER/processed/$SPLIT.raw.$LANG" "$TASK_DATA_FOLDER/processed/$SPLIT.raworg.$LANG";
+        tr '[:lower:]' '[:upper:]' < "$TASK_DATA_FOLDER/processed/$SPLIT.raworg.$LANG" > "$TASK_DATA_FOLDER/processed/$SPLIT.raw.$LANG";
       fi
       LANG="input$INPUT_TYPE"
       echo "BPE encoding $SPLIT/$LANG"
