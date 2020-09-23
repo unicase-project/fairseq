@@ -130,6 +130,8 @@ do
     # BPE encode.
     for INPUT_TYPE in $(seq 0 $((INPUT_COUNT-1)))
     do
+      LANG="input$INPUT_TYPE"
+      echo "BPE encoding $SPLIT/$LANG"
       # optionally upppercase all input
       if [ "$CASING" = "U" ]
       then
@@ -138,8 +140,6 @@ do
         cp "$TASK_DATA_FOLDER/processed/$SPLIT.raw.$LANG" "$TASK_DATA_FOLDER/processed/$SPLIT.raworg.$LANG";
         tr '[:lower:]' '[:upper:]' < "$TASK_DATA_FOLDER/processed/$SPLIT.raworg.$LANG" > "$TASK_DATA_FOLDER/processed/$SPLIT.raw.$LANG";
       fi
-      LANG="input$INPUT_TYPE"
-      echo "BPE encoding $SPLIT/$LANG"
       python -m scripts.spm_encode \
       --model "$SPM_MODEL" \
       --inputs "$TASK_DATA_FOLDER/processed/$SPLIT.raw.$LANG" \
