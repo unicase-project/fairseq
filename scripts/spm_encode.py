@@ -73,14 +73,16 @@ def main():
 
         def encode_line(line):
             line = line.strip()
-            if len(line) > 0:
-                line = encode(line)
-                if valid(line):
-                    return line
-                else:
-                    stats["num_filtered"] += 1
-            else:
+            if len(line) == 0:
+                line = " "
                 stats["num_empty"] += 1
+
+            line = encode(line)
+            if valid(line):
+                return line
+            else:
+                stats["num_filtered"] += 1
+
             return None
 
         for i, lines in enumerate(zip(*inputs), start=1):
@@ -91,7 +93,7 @@ def main():
             if i % 10000 == 0:
                 print("processed {} lines".format(i), file=sys.stderr)
 
-        print("skipped {} empty lines".format(stats["num_empty"]), file=sys.stderr)
+        print("found {} empty lines".format(stats["num_empty"]), file=sys.stderr)
         print("filtered {} lines".format(stats["num_filtered"]), file=sys.stderr)
 
 

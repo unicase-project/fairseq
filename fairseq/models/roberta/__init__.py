@@ -7,3 +7,4 @@ from .hub_interface import *  # noqa
 from .model import *  # noqa
 from .model_camembert import *  # noqa
 from .model_xlmr import *  # noqa
+from fairseq.models.unicase.model_unicase import *  # noqa
