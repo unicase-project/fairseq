@@ -141,7 +141,7 @@ class UnicaseMaskedLmLoss(FairseqCriterion):
         )
 
         case_loss = modules.cross_entropy(
-            extra["case_output"].view(-1, extra["case_output"].size(-1)).to(torch.float32),
+            extra["case_output"].view(-1, extra["case_output"].size(-1)),
             target_cases.view(-1),
             reduction='sum',
             ignore_index=0,
