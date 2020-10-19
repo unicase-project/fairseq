@@ -94,9 +94,19 @@ class UnicaseMaskedLmLoss(FairseqCriterion):
     Implementation for the loss used in unicase masked language model (MLM) training.
     """
 
-    def __init__(self, task, tpu):
+    def __init__(self, task, tpu, case_weight):
         super().__init__(task)
+        self.case_weight = case_weight
         self.tpu = tpu
+
+    @staticmethod
+    def add_args(parser):
+        # fmt: off
+        parser.add_argument('--case-weight',
+                            default=0.1,
+                            type=float,
+                            help='Weight of the case loss')
+        # fmt: on
 
     def forward(self, model, sample, reduce=True):
         """Compute the loss for the given sample.
@@ -147,7 +157,7 @@ class UnicaseMaskedLmLoss(FairseqCriterion):
             ignore_index=0,
         )
 
-        loss = base_token_loss + 0.1 * case_loss
+        loss = base_token_loss + self.case_weight * case_loss
 
         logging_output = {
             'loss': loss if self.tpu else loss.data,
