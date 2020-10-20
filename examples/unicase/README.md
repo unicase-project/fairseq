@@ -82,3 +82,12 @@ fairseq-train --fp16 $DATA_DIR \
         --max-update $TOTAL_UPDATES --log-format tqdm --skip-invalid-size-inputs-valid-test \
         --save-interval-updates $SAVE_INTERVAL_UPDATES --validate-interval-updates $SAVE_INTERVAL_UPDATES \
         --save-interval 9999 --validate-interval 9999 --dict_cased_words 68847 --dict_non_cased_words 2159 \
+
+
+
+## Preprocess GLUE DATA
+/data/rpowalski/pner/fairseq/examples/unicase/preprocess_GLUE_tasks_spm.sh \
+    /data-c/shared/ar/unicase/uni32_dgx2/glue-data ALL \
+    /data-c/shared/ar/unicase/uni32_dgx2/unicase.model \
+    /data-c/shared/ar/unicase/uni32_dgx2/dict.txt \
+    /data-c/shared/ar/unicase/uni32_dgx2/glue-bin \

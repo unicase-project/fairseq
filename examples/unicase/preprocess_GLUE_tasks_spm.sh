@@ -17,7 +17,6 @@ TASKS=$2 # QQP
 SPM_MODEL=$3
 DICT=$4
 OUT_FOLDER=$5
-CASING=$6
 
 
 if [ "$TASKS" = "ALL" ]
@@ -132,14 +131,7 @@ do
     do
       LANG="input$INPUT_TYPE"
       echo "BPE encoding $SPLIT/$LANG"
-      # optionally upppercase all input
-      if [ "$CASING" = "U" ]
-      then
-        echo "Converting to uppercase"
-        echo "Copy $TASK_DATA_FOLDER/processed/$SPLIT.raw.$LANG $TASK_DATA_FOLDER/processed/$SPLIT.raworg.$LANG"
-        cp "$TASK_DATA_FOLDER/processed/$SPLIT.raw.$LANG" "$TASK_DATA_FOLDER/processed/$SPLIT.raworg.$LANG";
-        tr '[:lower:]' '[:upper:]' < "$TASK_DATA_FOLDER/processed/$SPLIT.raworg.$LANG" > "$TASK_DATA_FOLDER/processed/$SPLIT.raw.$LANG";
-      fi
+
       python -m scripts.spm_encode \
       --model "$SPM_MODEL" \
       --inputs "$TASK_DATA_FOLDER/processed/$SPLIT.raw.$LANG" \
