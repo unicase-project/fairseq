@@ -6,9 +6,9 @@
 
 
 # raw glue data as downloaded by glue download script (https://gist.github.com/W4ngatang/60c2bdb54d156a41194446737ce03e2e)
-if [[ $# -ne 6 ]]; then
+if [[ $# -ne 5 ]]; then
   echo "Run as following:"
-  echo "./examples/roberta/preprocess_GLUE_tasks_spm.sh <glud_data_folder> <task_name> <spm_model_path> <dict_path> <out_folder> <casing>"
+  echo "./examples/roberta/preprocess_GLUE_tasks_spm.sh <glud_data_folder> <task_name> <spm_model_path> <dict_path> <out_folder>"
   exit 1
 fi
 
